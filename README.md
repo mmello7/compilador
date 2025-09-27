@@ -16,6 +16,7 @@ O objetivo deste trabalho foi colocar em prática os conceitos estudados em sala
 - Geração de saída: retorno de mensagens de erro (quando houver) ou confirmação de código válido.
 
 <h2>Tecnologias Utilizadas:</h2> 
+
 - Python 3.10+ (linguagem de implementação)
 
 - PLY (Python Lex-Yacc) para análise léxica e sintática
