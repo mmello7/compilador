@@ -3,9 +3,10 @@
 Este repositório contém o desenvolvimento de um compilador simples da linguagem C, implementado em Python. O projeto foi desenvolvido como parte de uma proposta acadêmica da disciplina de Compiladores, em colaboração com colega da turma.
 
 <h2>Descrição do Projeto</h2>  
-- O objetivo deste trabalho foi colocar em prática os conceitos estudados em sala de aula sobre análise léxica, sintática e semântica, simulando o funcionamento básico de um compilador.
+O objetivo deste trabalho foi colocar em prática os conceitos estudados em sala de aula sobre análise léxica, sintática e semântica, simulando o funcionamento básico de um compilador.
 
 <h4>Nosso compilador recebe como entrada um código escrito em C e realiza as seguintes etapas:</h4>  
+
 - Análise léxica: reconhecimento de tokens (palavras-chave, identificadores, operadores, etc.).
 
 - Análise sintática: verificação da estrutura do programa de acordo com a gramática definida.
