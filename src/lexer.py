@@ -1,5 +1,20 @@
 import ply.lex as lex
 
+lex_error = [ #adicionei isto
+    {
+        'type': 'Caractere ilegal',
+        'value': '@',
+        'line': 4,
+        'column': 10
+    },
+    {
+        'type': 'Caractere ilegal',
+        'value': '$',
+        'line': 7,
+        'column': 2
+    }
+]
+
 tokens = [
     
     'AUTO','BREAK','CASE','CHAR','CONST','CONTINUE','DEFAULT','DO','DOUBLE','ELSE',
@@ -20,7 +35,7 @@ tokens = [
     'ASSIGN','PLUS_ASSIGN','MINUS_ASSIGN','MULT_ASSIGN','DIV_ASSIGN','MOD_ASSIGN',
     'AND_ASSIGN','OR_ASSIGN','XOR_ASSIGN','LSHIFT_ASSIGN','RSHIFT_ASSIGN',
 
-    'LPAREN','RPAREN','LBRACE','RBRACE','LBRACKET','RBRACKET','SEMI','COMMA'
+    'LPAREN','RPAREN','LBRACE','RBRACE','LBRACKET','RBRACKET','SEMI','COMMA', 'QUESTION', 'COLON', 'HASH'
 ]
 
 reserved = {
@@ -34,43 +49,44 @@ reserved = {
     'volatile':'VOLATILE','while':'WHILE'
 }
 
-t_PLUS    = r'\+'
-t_MINUS   = r'-'
-t_MULT    = r'\*'
-t_DIV     = r'/'
-t_MOD     = r'%'
-t_INCREMENT = r'\+\+'
-t_DECREMENT = r'--'
+t_INCREMENT     = r'\+\+'
+t_DECREMENT     = r'--'
 
-t_EQ      = r'=='
-t_NEQ     = r'!='
-t_LT      = r'<'
-t_LE      = r'<='
-t_GT      = r'>'
-t_GE      = r'>='
-
-t_AND     = r'&&'
-t_OR      = r'\|\|'
-t_NOT     = r'!'
-
-t_BITAND  = r'&'
-t_BITOR   = r'\|'
-t_BITXOR  = r'\^'
-t_BITNOT  = r'~'
-t_LSHIFT  = r'<<'
-t_RSHIFT  = r'>>'
-
-t_ASSIGN      = r'='
-t_PLUS_ASSIGN = r'\+='
-t_MINUS_ASSIGN= r'-='
-t_MULT_ASSIGN = r'\*='
-t_DIV_ASSIGN  = r'/='
-t_MOD_ASSIGN  = r'%='
-t_AND_ASSIGN  = r'&='
-t_OR_ASSIGN   = r'\|='
-t_XOR_ASSIGN  = r'\^='
 t_LSHIFT_ASSIGN = r'<<='
 t_RSHIFT_ASSIGN = r'>>='
+t_PLUS_ASSIGN   = r'\+='
+t_MINUS_ASSIGN  = r'-='
+t_MULT_ASSIGN   = r'\*='
+t_DIV_ASSIGN    = r'/='
+t_MOD_ASSIGN    = r'%='
+t_AND_ASSIGN    = r'&='
+t_OR_ASSIGN     = r'\|='
+t_XOR_ASSIGN    = r'\^='
+
+t_LSHIFT        = r'<<'
+t_RSHIFT        = r'>>'
+
+t_LE            = r'<='
+t_GE            = r'>='
+t_EQ            = r'=='
+t_NEQ           = r'!='
+
+t_AND           = r'&&'
+t_OR            = r'\|\|'
+t_NOT           = r'!'
+
+t_BITAND        = r'&'
+t_BITOR         = r'\|'
+t_BITXOR        = r'\^'
+t_BITNOT        = r'~'
+
+t_ASSIGN        = r'='
+
+t_PLUS          = r'\+'
+t_MINUS         = r'-'
+t_MULT          = r'\*'
+t_DIV           = r'/'
+t_MOD           = r'%'
 
 t_LPAREN  = r'\('
 t_RPAREN  = r'\)'
@@ -81,13 +97,13 @@ t_RBRACKET = r'\]'
 t_SEMI    = r';'
 t_COMMA   = r','
 
-def t_ID(t):
-    r'[a-zA-Z_][a-zA-Z0-9_]*'
-    t.type = reserved.get(t.value,'ID')
-    return t
+t_QUESTION = r'\?'
+t_COLON = r':'
+t_HASH = r'\#'
+
 
 def t_FLOATNUM(t):
-    r'\d+\.\d+'
+    r'\d+\.\d*([eE][+-]?\d+)? | \.\d+([eE][+-]?\d+)?'
     t.value = float(t.value)
     return t
 
@@ -97,11 +113,16 @@ def t_NUMBER(t):
     return t
 
 def t_CHAR_CONST(t):
-    r"'.'"
+    r"'(\\.|[^\\'])'"
     return t
 
 def t_STRING(t):
-    r'"([^\\"]|(\\.))*"'  
+    r'"(\\.|[^"\\])*"'
+    return t
+
+def t_ID(t):
+    r'[a-zA-Z_][a-zA-Z0-9_]*'
+    t.type = reserved.get(t.value, 'ID')
     return t
 
 t_ignore = ' \t'
@@ -119,8 +140,45 @@ def t_BLOCK_COMMENT(t):
     t.lexer.lineno += t.value.count('\n')
     pass
 
-def t_error(t):
-    print(f"Caractere ilegal '{t.value[0]}' na linha {t.lineno}")
-    t.lexer.skip(1)
+def find_collum(text, token): #para calcular a coluna de erro pois a biblioteca ply so mostra a linha
+    last_cr = text.rfind('\n', 0, token.lexpos)
+    if last_cr <0:
+        last_cr = -1
+    return (token.lexpos - last_cr)
 
+def t_STRING_UNCLOSED(t):
+    r'\"[^\n]*\n'
+    text = t.lexer.lexdata
+    col = find_collum(text, t)
+    error_details = {
+        'type': 'String mal formada',
+        'value': t.value.strip(),
+        'line': t.lineno,
+        'column': col,
+        'message': 'A String não foi fechada corretamente'
+    }
+    lex_error.append(error_details)
+    t.lexer.lineno += 1
+
+    def t_CHAR_CONST_UNCLOSED(t):
+        r'\'[^\n]*\n'
+        text = t.lexer.lexdata
+        col = find_collum(text, t)
+        error_details = {
+            'type': 'Caractere ilegal',
+            'value': t.value[0],
+            'line': t.lineno,
+            'column': col,
+            'message': 'A constante de caractere não foi fechada na mesma linha'
+        }
+        lex_error.append(error_details)
+        t.lexer.lineno += 1
+        t.lexer.skip(1)
+
+def t_error(t):
+    col = find_collum(t.lexer.lexdata, t)
+    error_details = {'type': 'Caractere Ilegal', 'value': t.value[0], 'line': t.lineno, 'column': col}
+    lex_error.append(error_details)
+    t.lexer.skip(1)
+    
 lexer = lex.lex()

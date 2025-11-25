@@ -1,12 +1,12 @@
 import ply.yacc as yacc
-from lexer import tokens
+from lexer import lexer, tokens, find_collum
 
-# -----------------------------
-# Programa
-# -----------------------------
+parse_error = []
+
 def p_program(p):
     '''program : external_declaration_list'''
     p[0] = p[1]
+
 
 def p_external_declaration_list(p):
     '''external_declaration_list : external_declaration_list external_declaration
@@ -16,20 +16,17 @@ def p_external_declaration_list(p):
     else:
         p[0] = [p[1]]
 
-# -----------------------------
-# Declaração externa (função ou variável)
-# -----------------------------
+
 def p_external_declaration(p):
     '''external_declaration : function_definition
                             | declaration'''
     p[0] = p[1]
 
-# -----------------------------
-# Declaração de variável
-# -----------------------------
+
 def p_declaration(p):
     '''declaration : type_specifier init_declarator_list SEMI'''
     p[0] = ('declare', p[1], p[2])
+
 
 def p_type_specifier(p):
     '''type_specifier : INT
@@ -39,6 +36,7 @@ def p_type_specifier(p):
                       | VOID'''
     p[0] = p[1]
 
+
 def p_init_declarator_list(p):
     '''init_declarator_list : init_declarator
                             | init_declarator_list COMMA init_declarator'''
@@ -46,6 +44,7 @@ def p_init_declarator_list(p):
         p[0] = [p[1]]
     else:
         p[0] = p[1] + [p[3]]
+
 
 def p_init_declarator(p):
     '''init_declarator : ID
@@ -55,19 +54,20 @@ def p_init_declarator(p):
     else:
         p[0] = (p[1], p[3])
 
+
 def p_constant(p):
     '''constant : NUMBER
                 | FLOATNUM
-                | CHAR_CONST'''
+                | CHAR_CONST
+                | STRING'''
     p[0] = p[1]
 
-# -----------------------------
-# Função
-# -----------------------------
+
 def p_function_definition(p):
     '''function_definition : type_specifier ID LPAREN parameter_list RPAREN compound_statement
                            | type_specifier ID LPAREN RPAREN compound_statement'''
     p[0] = ('function', p[1], p[2], p[4] if len(p) == 7 else [])
+
 
 def p_parameter_list(p):
     '''parameter_list : parameter
@@ -77,13 +77,12 @@ def p_parameter_list(p):
     else:
         p[0] = p[1] + [p[3]]
 
+
 def p_parameter(p):
     '''parameter : type_specifier ID'''
     p[0] = (p[1], p[2])
 
-# -----------------------------
-# Composto: { ... }
-# -----------------------------
+
 def p_compound_statement(p):
     '''compound_statement : LBRACE statement_list RBRACE
                           | LBRACE RBRACE'''
@@ -92,9 +91,7 @@ def p_compound_statement(p):
     else:
         p[0] = []
 
-# -----------------------------
-# Lista de instruções
-# -----------------------------
+
 def p_statement_list(p):
     '''statement_list : statement_list statement
                       | statement'''
@@ -103,9 +100,7 @@ def p_statement_list(p):
     else:
         p[0] = [p[1]]
 
-# -----------------------------
-# Instrução
-# -----------------------------
+
 def p_statement(p):
     '''statement : declaration
                  | expression_statement
@@ -115,9 +110,7 @@ def p_statement(p):
                  | compound_statement'''
     p[0] = p[1]
 
-# -----------------------------
-# Expressões
-# -----------------------------
+
 def p_expression_statement(p):
     '''expression_statement : expression SEMI
                             | SEMI'''
@@ -125,6 +118,7 @@ def p_expression_statement(p):
         p[0] = p[1]
     else:
         p[0] = None
+
 
 def p_expression(p):
     '''expression : assignment_expression
@@ -134,6 +128,7 @@ def p_expression(p):
     else:
         p[0] = ('comma', p[1], p[3])
 
+
 def p_assignment_expression(p):
     '''assignment_expression : ID ASSIGN assignment_expression
                              | logical_or_expression'''
@@ -141,6 +136,7 @@ def p_assignment_expression(p):
         p[0] = ('assign', p[1], p[3])
     else:
         p[0] = p[1]
+
 
 def p_logical_or_expression(p):
     '''logical_or_expression : logical_and_expression
@@ -150,6 +146,7 @@ def p_logical_or_expression(p):
     else:
         p[0] = ('or', p[1], p[3])
 
+
 def p_logical_and_expression(p):
     '''logical_and_expression : equality_expression
                               | logical_and_expression AND equality_expression'''
@@ -157,6 +154,7 @@ def p_logical_and_expression(p):
         p[0] = p[1]
     else:
         p[0] = ('and', p[1], p[3])
+
 
 def p_equality_expression(p):
     '''equality_expression : relational_expression
@@ -166,6 +164,7 @@ def p_equality_expression(p):
         p[0] = p[1]
     else:
         p[0] = (p[2], p[1], p[3])
+
 
 def p_relational_expression(p):
     '''relational_expression : additive_expression
@@ -178,6 +177,7 @@ def p_relational_expression(p):
     else:
         p[0] = (p[2], p[1], p[3])
 
+
 def p_additive_expression(p):
     '''additive_expression : multiplicative_expression
                            | additive_expression PLUS multiplicative_expression
@@ -186,6 +186,7 @@ def p_additive_expression(p):
         p[0] = p[1]
     else:
         p[0] = (p[2], p[1], p[3])
+
 
 def p_multiplicative_expression(p):
     '''multiplicative_expression : unary_expression
@@ -197,8 +198,39 @@ def p_multiplicative_expression(p):
     else:
         p[0] = (p[2], p[1], p[3])
 
+
+def p_postfix_expression(p):
+    '''postfix_expression : primary_expression
+                          | postfix_expression LPAREN argument_expression_list_opt RPAREN
+                          | postfix_expression INCREMENT
+                          | postfix_expression DECREMENT'''
+    if len(p) == 2:
+        p[0] = p[1]
+    elif p[2] == '(':
+        p[0] = ('call', p[1], p[3])
+    elif p[2] == '++':
+        p[0] = ('post_inc', p[1])  
+    elif p[2] == '--':
+        p[0] = ('post_dec', p[1])
+
+
+def p_argument_expression_list_opt(p):
+    '''argument_expression_list_opt : argument_expression_list
+                                    | empty'''
+    p[0] = p[1] if p[1] is not None else []
+
+
+def p_argument_expression_list(p):
+    '''argument_expression_list : assignment_expression
+                                | argument_expression_list COMMA assignment_expression'''
+    if len(p) == 2:
+        p[0] = [p[1]]
+    else:
+        p[0] = p[1] + [p[3]]
+
+
 def p_unary_expression(p):
-    '''unary_expression : primary_expression
+    '''unary_expression : postfix_expression
                         | PLUS unary_expression
                         | MINUS unary_expression
                         | NOT unary_expression
@@ -207,7 +239,9 @@ def p_unary_expression(p):
     if len(p) == 2:
         p[0] = p[1]
     else:
-        p[0] = (p[1], p[2])
+        op_map = {'++': 'pre_inc', '--': 'pre_dec', '!' : 'not', '+' : 'uplus', '-' : 'uminus'}
+        p[0] = (op_map.get(p[1], p[1], p[2]))
+
 
 def p_primary_expression(p):
     '''primary_expression : ID
@@ -217,17 +251,8 @@ def p_primary_expression(p):
         p[0] = p[1]
     elif len(p) == 4:
         p[0] = p[2]
+        
 
-def p_constant(p):
-    '''constant : NUMBER
-                | FLOATNUM
-                | CHAR_CONST
-                | STRING'''
-    p[0] = p[1]
-
-# -----------------------------
-# Seleção (if / switch)
-# -----------------------------
 def p_selection_statement(p):
     '''selection_statement : IF LPAREN expression RPAREN statement
                            | IF LPAREN expression RPAREN statement ELSE statement'''
@@ -236,9 +261,7 @@ def p_selection_statement(p):
     else:
         p[0] = ('if_else', p[3], p[5], p[7])
 
-# -----------------------------
-# Iteração (while / for / do)
-# -----------------------------
+
 def p_iteration_statement(p):
     '''iteration_statement : WHILE LPAREN expression RPAREN statement
                            | FOR LPAREN expression_statement expression_statement expression RPAREN statement'''
@@ -247,23 +270,40 @@ def p_iteration_statement(p):
     else:
         p[0] = ('for', p[3], p[4], p[5], p[7])
 
-# -----------------------------
-# Jump (return, break, continue)
-# -----------------------------
+
 def p_jump_statement(p):
     '''jump_statement : RETURN expression SEMI
                       | BREAK SEMI
                       | CONTINUE SEMI'''
     p[0] = tuple(p[1:])
 
-# -----------------------------
-# Tratamento de erro
-# -----------------------------
-def p_error(p):
-    if p:
-        print(f"Erro de sintaxe no token '{p.value}' na linha {p.lineno}")
-    else:
-        print("Erro de sintaxe no final do arquivo")
+def p_empty(p):
+    'empty :'
+    pass
 
-# Cria o parser
+
+def p_error(p):
+    if not p:
+        error_details = {'type': 'Erro de Sintaxe', 'value': 'EOF', 'line': lexer.lineno, 'column': 'N/A', 'message': 'Final de arquivo inesperado.'}
+        parse_error.append(error_details)
+        return
+
+    col = find_collum(lexer.lexdata, p)
+    error_details = {'type': 'Erro de Sintaxe', 'value': p.value, 'line': p.lineno, 'column': col, 'message': f"Token inesperado '{p.value}'"}
+    parse_error.append(error_details)
+    # Tenta se recuperar para encontrar mais erros
+    while True:
+        tok = parser.token()
+        if not tok or tok.type in ('SEMI', 'RBRACE'): break
+    parser.errok()
+    return tok
+
+
+def find_column(input_text, token):
+    """Calculate the column number of a token in the input text."""
+    last_newline = input_text.rfind('\n', 0, token.lexpos)
+    if last_newline < 0:
+        last_newline = -1
+    return (token.lexpos - last_newline)
+
 parser = yacc.yacc()
