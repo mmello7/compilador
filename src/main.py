@@ -1,7 +1,7 @@
 import sys
 import json
 
-from lexer import lexer, lex_error, symbol_table
+from lexer import lexer, lex_error, symbol_table, tokens
 from parser import parser, parse_error
 
 def main():
@@ -62,6 +62,35 @@ def main():
 
     
     print("\n" + "="*66)
+
+
+   
+    tabela_simbolos = {} 
+    lista_tokens_formatada = []
+    
+   
+    ordem_simbolo = 1
+
+    print(">>> 1. LISTA DOS TOKENS <<<")
+    print(f"{'TIPO':<20} | {'VALOR'}")
+    print("-" * 40)
+
+    for token in tokens:
+        type, value = token
+        
+       
+        print(f"{type:<20} | {value}")
+        
+       
+        if tipo == "ID":
+            if value not in tabela_simbolos:
+                tabela_simbolos[valor] = {
+                    'order': ordem_simbolo,
+                    'type': 'IDENTIFICADOR' 
+                }
+                ordem_simbolo += 1
+
+    print("\n" + "="*40 + "\n")
 
 if __name__ == '__main__':
     main()
