@@ -1,7 +1,7 @@
 import sys
 import json
 
-from lexer import lexer, lex_error, symbol_table, tokens
+from lexer import lexer, lex_error, symbol_table, find_collum
 from parser import parser, parse_error
 
 def main():
@@ -17,7 +17,17 @@ def main():
     except FileNotFoundError:
         print(f"Erro: O arquivo '{file_path}' não foi encontrado.")
         sys.exit(1)
-        
+
+
+    lexer.input(code)
+    token_list = []
+    while True:
+        tok = lexer.token()
+        if not tok:
+            break
+        token_list.append(tok)    
+
+
     ast = parser.parse(code, lexer=lexer)
 
     print(f"DIAGNÓSTICO: A lista lex_error tem {len(lex_error)} erros.")
@@ -44,21 +54,35 @@ def main():
     else:
         print("="*20 + " ANÁLISE CONCLUÍDA COM SUCESSO " + "="*20)
         print("\nNenhum erro léxico ou sintático encontrado.")
+
+        print("\n--- Tabela de Tokens---")
+        print(f"{'TIPO':<10}  {'COLUNA':<10} {'TIPO':<20} {'VALOR'}")
+        print("-" * 60)
+
+        for tok in token_list:
+            col = find_collum(code, tok)
+            print(f"{tok.lineno:<10} {col:<10} {tok.type:<20} {tok.value}")
+
+        print("\n--- Tabela de Símbolos ---")
+    
+        print(f"{'ORDEM' :<10} {'NOME DO SÍMBOLO'}")
+        print("-" *30)
+
+        sorted_symbols = sorted(symbol_table)
+
+        for i, symbol in enumerate(sorted_symbols, 1):
+            print(f"#{i:<9} {symbol}")
+
+
+        
         print("\n--- Árvore Sintática Abstrata (AST) Gerada ---")
             
         print(json.dumps(ast, indent=2))
         print("\n" + "="*66)
         print("DIAGNÓSTICO: O programa acha que não há erros e vai tentar imprimir a AST.")
     
-    print("\n--- Tabela de Símbolos ---")
+
     
-    print(f"{'ORDEM' :<10} {'NOME DO SÍMBOLO'}")
-    print("-" *30)
-
-    sorted_symbols = sorted(symbol_table)
-
-    for i, symbol in enumerate(sorted_symbols, 1):
-        print(f"#{i:<9} {symbol}")
 
     
     print("\n" + "="*66)
@@ -71,26 +95,9 @@ def main():
    
     ordem_simbolo = 1
 
-    print(">>> 1. LISTA DOS TOKENS <<<")
-    print(f"{'TIPO':<20} | {'VALOR'}")
-    print("-" * 40)
+    
 
-    for token in tokens:
-        type, value = token
-        
-       
-        print(f"{type:<20} | {value}")
-        
-       
-        if tipo == "ID":
-            if value not in tabela_simbolos:
-                tabela_simbolos[valor] = {
-                    'order': ordem_simbolo,
-                    'type': 'IDENTIFICADOR' 
-                }
-                ordem_simbolo += 1
-
-    print("\n" + "="*40 + "\n")
+    
 
 if __name__ == '__main__':
     main()
