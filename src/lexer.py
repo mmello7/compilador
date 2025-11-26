@@ -1,19 +1,7 @@
 import ply.lex as lex
 
-lex_error = [ #adicionei isto
-    {
-        'type': 'Caractere ilegal',
-        'value': '@',
-        'line': 4,
-        'column': 10
-    },
-    {
-        'type': 'Caractere ilegal',
-        'value': '$',
-        'line': 7,
-        'column': 2
-    }
-]
+lex_error = []
+symbol_table= []
 
 tokens = [
     
@@ -70,6 +58,8 @@ t_LE            = r'<='
 t_GE            = r'>='
 t_EQ            = r'=='
 t_NEQ           = r'!='
+t_LT            =r'<'
+t_GT            =r'>'
 
 t_AND           = r'&&'
 t_OR            = r'\|\|'
@@ -123,6 +113,10 @@ def t_STRING(t):
 def t_ID(t):
     r'[a-zA-Z_][a-zA-Z0-9_]*'
     t.type = reserved.get(t.value, 'ID')
+
+    if t.type == 'ID':
+        if t.value not in symbol_table:
+            symbol_table.append(t.value)
     return t
 
 t_ignore = ' \t'
@@ -160,20 +154,20 @@ def t_STRING_UNCLOSED(t):
     lex_error.append(error_details)
     t.lexer.lineno += 1
 
-    def t_CHAR_CONST_UNCLOSED(t):
-        r'\'[^\n]*\n'
-        text = t.lexer.lexdata
-        col = find_collum(text, t)
-        error_details = {
-            'type': 'Caractere ilegal',
-            'value': t.value[0],
-            'line': t.lineno,
-            'column': col,
-            'message': 'A constante de caractere não foi fechada na mesma linha'
+def t_CHAR_CONST_UNCLOSED(t):
+     r'\'[^\n]*\n'
+     text = t.lexer.lexdata
+     col = find_collum(text, t)
+     error_details = {
+        'type': 'Caractere ilegal',
+        'value': t.value[0],
+        'line': t.lineno,
+        'column': col,
+        'message': 'A constante de caractere não foi fechada na mesma linha'
         }
-        lex_error.append(error_details)
-        t.lexer.lineno += 1
-        t.lexer.skip(1)
+     lex_error.append(error_details)
+     t.lexer.lineno += 1
+     t.lexer.skip(1)
 
 def t_error(t):
     col = find_collum(t.lexer.lexdata, t)

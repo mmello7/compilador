@@ -66,7 +66,11 @@ def p_constant(p):
 def p_function_definition(p):
     '''function_definition : type_specifier ID LPAREN parameter_list RPAREN compound_statement
                            | type_specifier ID LPAREN RPAREN compound_statement'''
-    p[0] = ('function', p[1], p[2], p[4] if len(p) == 7 else [])
+    
+    if len(p) == 7: 
+        p[0] = ('function', p[1], p[2], p[4], p[6])
+    else:
+        p[0] = ('function', p[1], p[2], [], p[5])
 
 
 def p_parameter_list(p):
@@ -240,7 +244,7 @@ def p_unary_expression(p):
         p[0] = p[1]
     else:
         op_map = {'++': 'pre_inc', '--': 'pre_dec', '!' : 'not', '+' : 'uplus', '-' : 'uminus'}
-        p[0] = (op_map.get(p[1], p[1], p[2]))
+        p[0] = (op_map.get(p[1]),  p[2])
 
 
 def p_primary_expression(p):
@@ -299,11 +303,6 @@ def p_error(p):
     return tok
 
 
-def find_column(input_text, token):
-    """Calculate the column number of a token in the input text."""
-    last_newline = input_text.rfind('\n', 0, token.lexpos)
-    if last_newline < 0:
-        last_newline = -1
-    return (token.lexpos - last_newline)
+
 
 parser = yacc.yacc()
